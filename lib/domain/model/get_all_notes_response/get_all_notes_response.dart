@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:note_app/data/model/notes_model/note_model.dart';
+import 'package:note_app/domain/model/notes_model/note_model.dart';
+
 part 'get_all_notes_response.g.dart';
 
 @JsonSerializable()

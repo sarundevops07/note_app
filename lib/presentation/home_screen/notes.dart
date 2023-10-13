@@ -1,29 +1,26 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
-
+import 'package:note_app/application/bloc/note_app_bloc.dart';
 import 'package:note_app/const/action_type.dart';
 import 'package:note_app/const/enum.dart';
-import 'package:note_app/data/others/api.dart';
-import 'package:note_app/presentation/screen/add_edit_note.dart';
+import 'package:note_app/domain/model/notes_model/note_model.dart';
+import 'package:note_app/infrastructure/home_screen/i_home_screen_repository.dart';
+import 'package:note_app/presentation/add_edit_screen/add_edit_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-class Notes extends StatefulWidget {
-  String content;
-  String title;
-  String id;
-  Notes({
-    Key? key,
-    required this.content,
-    required this.title,
-    required this.id,
-  }) : super(key: key);
+class Notes extends StatelessWidget {
+  final String? content;
+  final String? title;
+  final String? id;
+  final NoteModel? notes;
 
-  @override
-  State<Notes> createState() => _NotesState();
-}
+  const Notes(
+      {Key? key,
+      required this.content,
+      required this.title,
+      required this.id,
+      required this.notes})
+      : super(key: key);
 
-class _NotesState extends State<Notes> {
-  // ignore: unused_field
-  var _popupMenuItemIndex = 0;
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -33,7 +30,8 @@ class _NotesState extends State<Notes> {
           builder: (_) {
             return AddEditNotes(
               type: ActionType.editNote,
-              id: widget.id,
+              id: id,
+              notes: notes,
             );
           },
         ),
@@ -48,37 +46,35 @@ class _NotesState extends State<Notes> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  widget.title,
+                  title!,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                PopupMenuButton(
+                PopupMenuButton<int>(
                   position: PopupMenuPosition.under,
                   onSelected: (value) => onMenuItemSelected(
-                    value as int,
+                    context,
+                    value,
+                    id!,
                   ),
                   itemBuilder: (context) => [
-                    PopupMenuItem(
-                      child: popUpList(
-                        itemName: "Edit",
-                        position: Options.edit.index,
-                      ),
+                    popUpList(
+                      itemName: "Edit",
+                      position: Options.edit.index,
                     ),
-                    PopupMenuItem(
-                      child: popUpList(
-                        itemName: "delete",
-                        position: Options.delete.index,
-                      ),
+                    popUpList(
+                      itemName: "delete",
+                      position: Options.delete.index,
                     ),
                   ],
-                )
+                ),
               ],
             ),
             Expanded(
               child: Text(
-                widget.content,
+                content!,
                 //maxLines: 7,
                 overflow: TextOverflow.fade,
               ),
@@ -89,38 +85,43 @@ class _NotesState extends State<Notes> {
     );
   }
 
-  Widget popUpList({String? itemName, int? position}) {
-    return PopupMenuItem(
+  PopupMenuItem<int> popUpList({String? itemName, int? position}) {
+    return PopupMenuItem<int>(
       value: position,
       child: Text(itemName ?? ""),
     );
   }
 
-  onMenuItemSelected(var value) {
-    setState(() {
-      _popupMenuItemIndex = value;
-    });
+  void onMenuItemSelected(BuildContext context, int value, String id) {
     if (value == Options.edit.index) {
-      Navigator.push(context, MaterialPageRoute(builder: (ctx) {
-        return AddEditNotes(
-          id: widget.id,
-          type: ActionType.editNote,
-        );
-      }));
-      // print("edit");
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (ctx) {
+            return AddEditNotes(
+              notes: notes,
+              id: id,
+              type: ActionType.editNote,
+            );
+          },
+        ),
+      );
     } else if (value == Options.delete.index) {
       showDialog(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
             title: const Text("Are you sure want to delete"),
-            content: Text(widget.title),
+            content: Text(title!),
             actions: [
               TextButton(
                 child: const Text('OK'),
                 onPressed: () {
-                  NoteDb.instance.deleteNote(widget.id);
+                  NoteRepository().deleteNote(id);
                   Navigator.of(context).pop();
+                  context
+                      .read<NoteAppBloc>()
+                      .add(const NoteAppEvent.getAllNotes());
                 },
               ),
               TextButton(
@@ -133,8 +134,6 @@ class _NotesState extends State<Notes> {
           );
         },
       );
-
-      //print("delete");
     }
   }
 }
